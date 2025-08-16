@@ -1,14 +1,14 @@
 extends Control
 
-# Normaliza: minúsculas, sin acentos comunes (áéíóúüñ)
+# Normalizador simple: minúsculas y sin acentos para matching robusto
 func _norm(s: String) -> String:
-	var t: String = s.to_lower()
+	var t: String = s.strip_edges().to_lower()
 	t = t.replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u").replace("ü","u").replace("ñ","n")
-	return t.strip_edges()
+	return t
 
 func _ready() -> void:
 	_autowire_buttons()
-	# Popup con el resultado si existe
+	# Popup con resultado si existe
 	if GameState and GameState.has_method("consume_result_message"):
 		var _msg: String = GameState.consume_result_message()
 		if _msg != "":
@@ -18,30 +18,35 @@ func _ready() -> void:
 			d.popup_centered()
 
 func _autowire_buttons() -> void:
-	# Busca TODOS los botones en profundidad y conecta segun su texto
-	var seen: Dictionary = {}
-	var stack: Array[Node] = [self]
+	var found: Array[String] = []
+	var stack: Array[Node] = []
+	stack.push_back(self)
 	while stack.size() > 0:
 		var node: Node = stack.pop_back()
 		for c: Node in node.get_children():
 			stack.push_back(c)
 			if c is Button:
 				var b: Button = c as Button
-				if seen.has(b): continue
-				seen[b] = true
-				var label: String = _norm(b.text)
-				if label == "":
-					label = _norm(b.name)
-
-				if label.find("jugar") != -1 or label.find("nueva") != -1 or label == "new" or label.find("start") != -1:
-					b.pressed.connect(_on_new)
-				elif label.find("continuar") != -1 or label.find("continue") != -1 or label.find("load") != -1:
-					b.pressed.connect(_on_continue)
-				elif label.find("configurar") != -1 or label.find("ajustes") != -1 or label.find("opciones") != -1 or label.find("settings") != -1 or label.find("options") != -1:
-					b.pressed.connect(_on_settings)
-				elif label.find("salir") != -1 or label.find("exit") != -1 or label.find("quit") != -1:
-					b.pressed.connect(_on_quit)
-				# Si no coincide nada, lo dejamos sin conectar
+				var label: String = b.text if b.text != "" else b.name
+				var key: String = _norm(label)
+				found.push_back("%s (%s)" % [label, b.get_path()])
+				# Conectar por patrones amplios
+				if key.find("jugar") != -1 or key.find("nueva") != -1 or key == "new" or key.find("start") != -1 or key == "play":
+					if not b.pressed.is_connected(_on_new):
+						b.pressed.connect(_on_new)
+				elif key.find("continuar") != -1 or key.find("continue") != -1 or key.find("load") != -1 or key.find("seguir") != -1:
+					if not b.pressed.is_connected(_on_continue):
+						b.pressed.connect(_on_continue)
+				elif key.find("config") != -1 or key.find("ajustes") != -1 or key.find("opciones") != -1 or key.find("settings") != -1 or key.find("options") != -1:
+					if not b.pressed.is_connected(_on_settings):
+						b.pressed.connect(_on_settings)
+				elif key.find("salir") != -1 or key.find("exit") != -1 or key.find("quit") != -1:
+					if not b.pressed.is_connected(_on_quit):
+						b.pressed.connect(_on_quit)
+	# Log para depurar nombres reales
+	print_rich("[b][PlayMenu][/b] Botones detectados:")
+	for s: String in found:
+		print_rich("  - %s" % s)
 
 func _on_new() -> void:
 	if GameState and GameState.has_method("new_game"):
@@ -65,7 +70,6 @@ func _on_continue() -> void:
 		push_warning("No hay partida guardada")
 
 func _on_settings() -> void:
-	# Si tienes un Settings.tscn, cámbialo aquí
 	var settings_scene: String = "res://scenes/Settings.tscn"
 	if ResourceLoader.exists(settings_scene):
 		get_tree().change_scene_to_file(settings_scene)
