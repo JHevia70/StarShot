@@ -5,7 +5,6 @@ extends Control
 @onready var btn_quit: Button = get_node_or_null("VBox/QuitButton") as Button
 
 func _ready() -> void:
-	# Conectar por rutas EXACTAS del .tscn
 	if btn_play != null:
 		btn_play.pressed.connect(_on_play)
 	else:
@@ -20,7 +19,6 @@ func _ready() -> void:
 		push_warning("No se encontró VBox/QuitButton")
 
 func _on_play() -> void:
-	# Preferimos abrir PlayMenu si existe; si no, ir directo a GalaxyMap
 	var playmenu_path: String = "res://scenes/PlayMenu.tscn"
 	var galaxy_path: String = "res://scenes/GalaxyMap.tscn"
 	if ResourceLoader.exists(playmenu_path):
