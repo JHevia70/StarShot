@@ -14,19 +14,23 @@ func _ready() -> void:
 		elif GameState.has_method("get_target"):
 			planet_name = str(GameState.get_target())
 	title.text = "Transmisión desde %s" % planet_name
+
 	if action != null:
 		action.pressed.connect(_on_go)
-	# Cargar y reproducir
-	if ResourceLoader.exists(video_path):
-		var stream: Resource = load(video_path)
-		if stream != null and player != null:
-			player.stream = stream
-			player.autoplay = true
-			player.stretch = true
-			player.stretch_mode = VideoStreamPlayer.STRETCH_KEEP_ASPECT_COVER
+
+	# Ajustes de escalado (Godot 4): usa KEEP_ASPECT y expande al contenedor
+	if player != null:
+		player.expand = true
+		player.stretch_mode = VideoStreamPlayer.STRETCH_KEEP_ASPECT  # 'COVER' no existe en VideoStreamPlayer
+
+	# Cargar y reproducir (usa WEBM/OGV en Godot 4)
+	if ResourceLoader.exists(video_path) and player != null:
+		var stream_res: Resource = load(video_path)
+		if stream_res != null and stream_res is VideoStream:
+			player.stream = stream_res as VideoStream
 			player.play()
 	else:
-		push_warning("No se encontró el video en %s. Convierte tu MP4 a WEBM y colócalo ahí." % video_path)
+		push_warning("No se encontró el video en: %s" % video_path)
 
 func _on_go() -> void:
 	var shooter_path: String = "res://scenes/Shooter.tscn"
