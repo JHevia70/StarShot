@@ -1,6 +1,6 @@
 extends Control
 
-# Normalizador simple: minúsculas y sin acentos para matching robusto
+# Normaliza: minúsculas y sin acentos para matching robusto
 func _norm(s: String) -> String:
 	var t: String = s.strip_edges().to_lower()
 	t = t.replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u").replace("ü","u").replace("ñ","n")
@@ -19,18 +19,21 @@ func _ready() -> void:
 
 func _autowire_buttons() -> void:
 	var found: Array[String] = []
-	var stack: Array[Node] = []
-	stack.push_back(self)
+	var stack: Array[Node] = [self]
 	while stack.size() > 0:
 		var node: Node = stack.pop_back()
 		for c: Node in node.get_children():
 			stack.push_back(c)
-			if c is Button:
-				var b: Button = c as Button
-				var label: String = b.text if b.text != "" else b.name
-				var key: String = _norm(label)
-				found.push_back("%s (%s)" % [label, b.get_path()])
-				# Conectar por patrones amplios
+			if c is BaseButton:
+				var b: BaseButton = c as BaseButton
+				var label_raw: String = ""
+				if b is Button:
+					label_raw = (b as Button).text
+				if label_raw == "":
+					label_raw = b.name
+				var key: String = _norm(label_raw)
+				found.push_back("%s (%s)" % [label_raw, b.get_path()])
+				# Conecta por patrones amplios
 				if key.find("jugar") != -1 or key.find("nueva") != -1 or key == "new" or key.find("start") != -1 or key == "play":
 					if not b.pressed.is_connected(_on_new):
 						b.pressed.connect(_on_new)
@@ -43,7 +46,7 @@ func _autowire_buttons() -> void:
 				elif key.find("salir") != -1 or key.find("exit") != -1 or key.find("quit") != -1:
 					if not b.pressed.is_connected(_on_quit):
 						b.pressed.connect(_on_quit)
-	# Log para depurar nombres reales
+	# Log de diagnóstico
 	print_rich("[b][PlayMenu][/b] Botones detectados:")
 	for s: String in found:
 		print_rich("  - %s" % s)
