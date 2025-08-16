@@ -1,15 +1,14 @@
 extends Control
 
-func _ready() -> void:
-	# Conectar botones por nombre o texto
-	var bnew: Button = _find_button(["New", "NuevaPartida", "Nueva", "Start", "Jugar", "BTN_New"]) as Button
-	var bcon: Button = _find_button(["Continue", "Continuar", "Load", "BTN_Continue"]) as Button
-	var bback: Button = _find_button(["Back", "Volver", "Atras", "Atrás", "BTN_Back"]) as Button
-	if bnew: bnew.pressed.connect(_on_new)
-	if bcon: bcon.pressed.connect(_on_continue)
-	if bback: bback.pressed.connect(_on_back)
+# Normaliza: minúsculas, sin acentos comunes (áéíóúüñ)
+func _norm(s: String) -> String:
+	var t: String = s.to_lower()
+	t = t.replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u").replace("ü","u").replace("ñ","n")
+	return t.strip_edges()
 
-	# Popup de resultado si existe mensaje
+func _ready() -> void:
+	_autowire_buttons()
+	# Popup con el resultado si existe
 	if GameState and GameState.has_method("consume_result_message"):
 		var _msg: String = GameState.consume_result_message()
 		if _msg != "":
@@ -18,24 +17,31 @@ func _ready() -> void:
 			add_child(d)
 			d.popup_centered()
 
-func _find_button(names: Array[String]) -> Button:
-	# 1) Buscar por nombre
-	for nm: String in names:
-		var n: Node = find_child(nm, true, false)
-		if n and n is Button:
-			return n as Button
-	# 2) Buscar por texto del botón
+func _autowire_buttons() -> void:
+	# Busca TODOS los botones en profundidad y conecta segun su texto
+	var seen: Dictionary = {}
 	var stack: Array[Node] = [self]
 	while stack.size() > 0:
-		var node: Node = stack.pop_back() as Node
+		var node: Node = stack.pop_back()
 		for c: Node in node.get_children():
 			stack.push_back(c)
 			if c is Button:
-				var bt: Button = c as Button
-				for nm: String in names:
-					if bt.text.to_lower() == String(nm).to_lower():
-						return bt
-	return null
+				var b: Button = c as Button
+				if seen.has(b): continue
+				seen[b] = true
+				var label: String = _norm(b.text)
+				if label == "":
+					label = _norm(b.name)
+
+				if label.find("jugar") != -1 or label.find("nueva") != -1 or label == "new" or label.find("start") != -1:
+					b.pressed.connect(_on_new)
+				elif label.find("continuar") != -1 or label.find("continue") != -1 or label.find("load") != -1:
+					b.pressed.connect(_on_continue)
+				elif label.find("configurar") != -1 or label.find("ajustes") != -1 or label.find("opciones") != -1 or label.find("settings") != -1 or label.find("options") != -1:
+					b.pressed.connect(_on_settings)
+				elif label.find("salir") != -1 or label.find("exit") != -1 or label.find("quit") != -1:
+					b.pressed.connect(_on_quit)
+				# Si no coincide nada, lo dejamos sin conectar
 
 func _on_new() -> void:
 	if GameState and GameState.has_method("new_game"):
@@ -58,9 +64,16 @@ func _on_continue() -> void:
 	else:
 		push_warning("No hay partida guardada")
 
-func _on_back() -> void:
-	var main_menu: String = "res://scenes/MainMenu.tscn"
-	if ResourceLoader.exists(main_menu):
-		get_tree().change_scene_to_file(main_menu)
+func _on_settings() -> void:
+	# Si tienes un Settings.tscn, cámbialo aquí
+	var settings_scene: String = "res://scenes/Settings.tscn"
+	if ResourceLoader.exists(settings_scene):
+		get_tree().change_scene_to_file(settings_scene)
 	else:
-		push_warning("No se encontró %s" % main_menu)
+		var d: AcceptDialog = AcceptDialog.new()
+		d.dialog_text = "Configuración aún no disponible."
+		add_child(d)
+		d.popup_centered()
+
+func _on_quit() -> void:
+	get_tree().quit()
