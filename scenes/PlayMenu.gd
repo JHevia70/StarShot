@@ -1,58 +1,35 @@
 extends Control
 
-# Normaliza: minúsculas y sin acentos para matching robusto
-func _norm(s: String) -> String:
-	var t: String = s.strip_edges().to_lower()
-	t = t.replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u").replace("ü","u").replace("ñ","n")
-	return t
+@onready var btn_new: Button = get_node_or_null("VBox/NewGameButton") as Button
+@onready var btn_continue: Button = get_node_or_null("VBox/ContinueButton") as Button
+@onready var btn_back: Button = get_node_or_null("VBox/BackButton") as Button
 
 func _ready() -> void:
-	_autowire_buttons()
-	# Popup con resultado si existe
-	if GameState and GameState.has_method("consume_result_message"):
-		var _msg: String = GameState.consume_result_message()
-		if _msg != "":
+	# Conectar botones por ruta EXACTA del .tscn
+	if btn_new != null:
+		btn_new.pressed.connect(_on_new)
+	else:
+		push_warning("No se encontró VBox/NewGameButton")
+	if btn_continue != null:
+		btn_continue.pressed.connect(_on_continue)
+	else:
+		push_warning("No se encontró VBox/ContinueButton")
+	if btn_back != null:
+		btn_back.pressed.connect(_on_back)
+	else:
+		push_warning("No se encontró VBox/BackButton")
+
+	# Mostrar popup con mensaje de resultado si existe
+	if GameState != null and GameState.has_method("consume_result_message"):
+		var msg: String = GameState.consume_result_message()
+		if msg != "":
 			var d: AcceptDialog = AcceptDialog.new()
-			d.dialog_text = _msg
+			d.dialog_text = msg
 			add_child(d)
 			d.popup_centered()
 
-func _autowire_buttons() -> void:
-	var found: Array[String] = []
-	var stack: Array[Node] = [self]
-	while stack.size() > 0:
-		var node: Node = stack.pop_back()
-		for c: Node in node.get_children():
-			stack.push_back(c)
-			if c is BaseButton:
-				var b: BaseButton = c as BaseButton
-				var label_raw: String = ""
-				if b is Button:
-					label_raw = (b as Button).text
-				if label_raw == "":
-					label_raw = b.name
-				var key: String = _norm(label_raw)
-				found.push_back("%s (%s)" % [label_raw, b.get_path()])
-				# Conecta por patrones amplios
-				if key.find("jugar") != -1 or key.find("nueva") != -1 or key == "new" or key.find("start") != -1 or key == "play":
-					if not b.pressed.is_connected(_on_new):
-						b.pressed.connect(_on_new)
-				elif key.find("continuar") != -1 or key.find("continue") != -1 or key.find("load") != -1 or key.find("seguir") != -1:
-					if not b.pressed.is_connected(_on_continue):
-						b.pressed.connect(_on_continue)
-				elif key.find("config") != -1 or key.find("ajustes") != -1 or key.find("opciones") != -1 or key.find("settings") != -1 or key.find("options") != -1:
-					if not b.pressed.is_connected(_on_settings):
-						b.pressed.connect(_on_settings)
-				elif key.find("salir") != -1 or key.find("exit") != -1 or key.find("quit") != -1:
-					if not b.pressed.is_connected(_on_quit):
-						b.pressed.connect(_on_quit)
-	# Log de diagnóstico
-	print_rich("[b][PlayMenu][/b] Botones detectados:")
-	for s: String in found:
-		print_rich("  - %s" % s)
-
 func _on_new() -> void:
-	if GameState and GameState.has_method("new_game"):
+	if GameState != null and GameState.has_method("new_game"):
 		GameState.new_game()
 	var scene_path: String = "res://scenes/GalaxyMap.tscn"
 	if ResourceLoader.exists(scene_path):
@@ -61,7 +38,7 @@ func _on_new() -> void:
 		push_warning("No se encontró %s" % scene_path)
 
 func _on_continue() -> void:
-	if GameState and GameState.has_method("has_save") and GameState.has_save():
+	if GameState != null and GameState.has_method("has_save") and GameState.has_save():
 		if GameState.has_method("continue_game"):
 			GameState.continue_game()
 		var scene_path: String = "res://scenes/GalaxyMap.tscn"
@@ -72,15 +49,9 @@ func _on_continue() -> void:
 	else:
 		push_warning("No hay partida guardada")
 
-func _on_settings() -> void:
-	var settings_scene: String = "res://scenes/Settings.tscn"
-	if ResourceLoader.exists(settings_scene):
-		get_tree().change_scene_to_file(settings_scene)
+func _on_back() -> void:
+	var main_menu: String = "res://scenes/MainMenu.tscn"
+	if ResourceLoader.exists(main_menu):
+		get_tree().change_scene_to_file(main_menu)
 	else:
-		var d: AcceptDialog = AcceptDialog.new()
-		d.dialog_text = "Configuración aún no disponible."
-		add_child(d)
-		d.popup_centered()
-
-func _on_quit() -> void:
-	get_tree().quit()
+		push_warning("No se encontró %s" % main_menu)

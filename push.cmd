@@ -51,9 +51,18 @@ if not exist .gitignore (
 git config user.name >nul 2>&1 || git config user.name "starshot-local"
 git config user.email >nul 2>&1 || git config user.email "starshot-local@example.com"
 
-git add -A
-git commit -m "%MSG%" --allow-empty
+REM --- Stage SOLO archivos modificados/eliminados ya rastreados ---
+git add -u
 
+REM Si no hay nada staged, salir sin error
+git diff --cached --quiet && (
+  echo [i] No hay cambios modificados/eliminados para commitear.
+  goto push
+)
+
+git commit -m "%MSG%"
+
+:push
 git rev-parse --abbrev-ref --symbolic-full-name @{u} >nul 2>&1
 if errorlevel 1 (
   git push -u origin %BRANCH%
