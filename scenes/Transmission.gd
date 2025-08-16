@@ -1,6 +1,6 @@
 extends Control
 
-@export var video_path: String = "res://video/transmission.mp4"
+@export var video_path: String = "res://video/transmission.webm"
 
 @onready var player: VideoStreamPlayer = $Video as VideoStreamPlayer
 @onready var title: Label = $Overlay/VBox/Title as Label
@@ -14,19 +14,19 @@ func _ready() -> void:
 		elif GameState.has_method("get_target"):
 			planet_name = str(GameState.get_target())
 	title.text = "Transmisión desde %s" % planet_name
-
 	if action != null:
 		action.pressed.connect(_on_go)
-
 	# Cargar y reproducir
 	if ResourceLoader.exists(video_path):
 		var stream: Resource = load(video_path)
 		if stream != null and player != null:
 			player.stream = stream
+			player.autoplay = true
+			player.stretch = true
+			player.stretch_mode = VideoStreamPlayer.STRETCH_KEEP_ASPECT_COVER
 			player.play()
 	else:
-		# Fallback: pantalla en negro con título ya visible
-		pass
+		push_warning("No se encontró el video en %s. Convierte tu MP4 a WEBM y colócalo ahí." % video_path)
 
 func _on_go() -> void:
 	var shooter_path: String = "res://scenes/Shooter.tscn"
