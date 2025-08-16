@@ -126,4 +126,3 @@ func _on_buy_speed() -> void:
 
 func _on_buy_armor() -> void:
 	_buy("armor")
-
