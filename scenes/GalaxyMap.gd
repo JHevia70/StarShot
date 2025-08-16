@@ -3,9 +3,9 @@ extends Node3D
 const TOTAL_PLANETS: int = 100
 const MIN_PLANETS_PER_STAR: int = 5
 const MAX_PLANETS_PER_STAR: int = 10
-const STAR_TYPES := [ "O", "B", "A", "F", "G", "K", "M" ]
+const STAR_TYPES: Array = [ "O", "B", "A", "F", "G", "K", "M" ]
 
-@export var sky_path: String = "res://textures/starfield.hdr" # HDRI/EXR/PNG panorámica; si no existe, usa procedural
+@export var sky_path: String = "res://textures/nebula_panorama.hdr" # Equirectangular HDR/EXR/PNG
 
 @onready var cam: Camera3D = $Camera3D as Camera3D
 @onready var env: WorldEnvironment = $WorldEnvironment as WorldEnvironment
@@ -15,24 +15,24 @@ const STAR_TYPES := [ "O", "B", "A", "F", "G", "K", "M" ]
 var stars: Array = []                 # Array[Node3D]
 var planets: Array = []               # Array[Node3D]
 var star_planet_counts: Array = []    # Array[int]
-var planet_to_unlock_index: int = 0
+var planet_to_unlock_index: int = 0   # índice global del siguiente planeta visible
+var highest_unlocked: int = -1        # último planeta superado
 
 # cámara orbital
 var yaw: float = 0.0
-var pitch: float = -0.2
-var dist: float = 60.0
+var pitch: float = -0.28
+var dist: float = 52.0
 var rotate_sensitivity: float = 0.01
 var zoom_step: float = 5.0
-var dist_min: float = 20.0
+var dist_min: float = 18.0
 var dist_max: float = 160.0
 var target: Vector3 = Vector3.ZERO
 
 func _ready() -> void:
-	randomize() # semilla global para randf()/randi()
-	# Cámara activa
+	randomize()
 	if cam != null:
 		cam.current = true
-	# Cielo: PanoramaSky si existe el HDRI, si no, procedural
+	# Cielo: PanoramaSky si hay nebulosa, sino procedural
 	var env_res: Environment = Environment.new()
 	var sky_res: Sky = Sky.new()
 	if sky_path != "" and ResourceLoader.exists(sky_path):
@@ -51,11 +51,11 @@ func _ready() -> void:
 	if env != null:
 		env.environment = env_res
 
-	# Progreso de desbloqueo
-	var highest: int = -1
+	# Progreso (solo un planeta nuevo visible cada vez)
+	highest_unlocked = -1
 	if GameState != null and "highest_unlocked" in GameState:
-		highest = int(GameState.highest_unlocked)
-	planet_to_unlock_index = max(0, highest + 1)
+		highest_unlocked = int(GameState.highest_unlocked)
+	planet_to_unlock_index = max(0, highest_unlocked + 1)
 
 	if hangar_btn != null:
 		hangar_btn.pressed.connect(_on_hangar)
@@ -69,7 +69,7 @@ func _build_galaxy() -> void:
 	planets.clear()
 	star_planet_counts.clear()
 
-	# Reparto de planetas por estrella (5..10) hasta 100
+	# Reparto 5..10 planetas por estrella hasta total 100
 	var remaining: int = TOTAL_PLANETS
 	while remaining > 0:
 		var chunk: int = MIN_PLANETS_PER_STAR + randi_range(0, MAX_PLANETS_PER_STAR - MIN_PLANETS_PER_STAR)
@@ -78,12 +78,13 @@ func _build_galaxy() -> void:
 		star_planet_counts.append(chunk)
 		remaining -= chunk
 
-	# Estrellas desperdigadas (no anillo): muestreo con separación mínima
-	var min_r: float = 20.0
-	var max_r: float = 60.0
+	# Estrellas dispersas con separación mínima
+	var min_r: float = 22.0
+	var max_r: float = 64.0
 	var min_sep: float = 8.0
-	var height_jitter: float = 6.0
+	var height_jitter: float = 6.5
 	var star_positions: Array = []  # Array[Vector3]
+
 	for i in range(star_planet_counts.size()):
 		var pos: Vector3 = _pick_star_pos(star_positions, min_r, max_r, min_sep, height_jitter)
 		star_positions.append(pos)
@@ -91,10 +92,11 @@ func _build_galaxy() -> void:
 		var star_node: Node3D = _spawn_star(pos, stype, i)
 		add_child(star_node)
 		stars.append(star_node)
+
 		# Planetas de esta estrella
 		var pcount: int = int(star_planet_counts[i])
 		for p in range(pcount):
-			var orbit_dist: float = 3.0 + 2.4 * float(p) + randf() * 0.7
+			var orbit_dist: float = 3.0 + 2.3 * float(p) + randf() * 0.6
 			var planet: Node3D = _spawn_planet(star_node, orbit_dist, i, p)
 			planets.append(planet)
 
@@ -103,7 +105,7 @@ func _build_galaxy() -> void:
 
 func _pick_star_pos(existing: Array, min_r: float, max_r: float, min_sep: float, height_jitter: float) -> Vector3:
 	var tries: int = 0
-	while tries < 100:
+	while tries < 120:
 		var r: float = lerp(min_r, max_r, randf())
 		var ang: float = randf() * TAU
 		var y: float = (randf() * 2.0 - 1.0) * height_jitter
@@ -116,17 +118,16 @@ func _pick_star_pos(existing: Array, min_r: float, max_r: float, min_sep: float,
 		if ok:
 			return cand
 		tries += 1
-	return Vector3(randf()*max_r, 0.0, randf()*max_r)
+	return Vector3(randf() * max_r, 0.0, randf() * max_r)
 
 func _focus_last_unlocked_star() -> void:
-	# Determinar la estrella que contiene el ultimo planeta desbloqueado
-	var last_idx: int = max(0, planet_to_unlock_index - 1)
+	var last_idx: int = max(0, highest_unlocked)  # si no hay progreso, 0
 	var sidx: int = _star_of_global_index(last_idx)
 	if sidx >= 0 and sidx < stars.size():
 		target = (stars[sidx] as Node3D).global_position
-		dist = 38.0
+		dist = 40.0
 		yaw = 0.0
-		pitch = -0.3
+		pitch = -0.28
 
 func _star_of_global_index(gidx: int) -> int:
 	var acc: int = 0
@@ -141,7 +142,7 @@ func _spawn_star(pos: Vector3, stype: String, star_index: int) -> Node3D:
 	var star: Node3D = Node3D.new()
 	star.name = "Star_%d" % star_index
 	star.position = pos
-	# esfera emisiva
+
 	var mesh: MeshInstance3D = MeshInstance3D.new()
 	var sphere: SphereMesh = SphereMesh.new()
 	sphere.radius = 1.5
@@ -149,61 +150,66 @@ func _spawn_star(pos: Vector3, stype: String, star_index: int) -> Node3D:
 	sphere.radial_segments = 64
 	sphere.rings = 32
 	mesh.mesh = sphere
+
 	var mat: StandardMaterial3D = StandardMaterial3D.new()
 	var col: Color = _star_color(stype)
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.albedo_color = col
 	mat.emission_enabled = true
 	mat.emission = col
-	mat.emission_energy_multiplier = 3.2
-	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.emission_energy_multiplier = 3.0
 	mesh.material_override = mat
 	star.add_child(mesh)
-	# partículas de corona
-	_add_corona(star, col)
-	# etiqueta 3D
+
+	# Nombre
 	var lbl: Label3D = Label3D.new()
 	lbl.text = "Estrella %d (%s)" % [star_index + 1, stype]
 	lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	lbl.position = Vector3(0, 2.2, 0)
+	lbl.position = Vector3(0, 2.0, 0)
 	star.add_child(lbl)
+
+	# Corona de partículas
+	_add_corona(star, col)
+
 	return star
 
 func _add_corona(star: Node3D, col: Color) -> void:
 	var particles: GPUParticles3D = GPUParticles3D.new()
-	particles.amount = 120
-	particles.local_coords = true
-	particles.lifetime = 1.8
+	particles.amount = 140
+	particles.lifetime = 1.9
 	particles.one_shot = false
+	particles.emitting = true
+	particles.local_coords = true
+
 	var pm: ParticleProcessMaterial = ParticleProcessMaterial.new()
 	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
-	pm.emission_sphere_radius = 1.2
+	pm.emission_sphere_radius = 1.3
 	pm.gravity = Vector3.ZERO
 	pm.initial_velocity_min = 0.0
-	pm.initial_velocity_max = 0.2
-	pm.angular_velocity_min = -0.5
-	pm.angular_velocity_max = 0.5
-	pm.scale_min = 0.25
-	pm.scale_max = 0.7
+	pm.initial_velocity_max = 0.25
+	pm.angular_velocity_min = -0.4
+	pm.angular_velocity_max = 0.4
+	pm.scale_min = 0.8
+	pm.scale_max = 1.3
+
+	var grad: Gradient = Gradient.new()
+	grad.colors = PackedColorArray([Color(col.r, col.g, col.b, 0.9), Color(col.r, col.g, col.b, 0.0)])
+	var ramp: GradientTexture1D = GradientTexture1D.new()
+	ramp.gradient = grad
+	pm.color_ramp = ramp
+
 	particles.process_material = pm
-	# Draw pass: quad aditivo con billboard
 	var quad: QuadMesh = QuadMesh.new()
-	quad.size = Vector2(0.35, 0.35)
-	var qmat: StandardMaterial3D = StandardMaterial3D.new()
-	qmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	qmat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-	qmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	qmat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	qmat.albedo_color = Color(col.r, col.g, col.b, 0.7)
+	quad.size = Vector2(0.6, 0.6)
 	particles.draw_pass_1 = quad
-	particles.material_override = qmat
+
 	star.add_child(particles)
-	particles.emitting = true
 
 func _spawn_planet(star_node: Node3D, orbit_radius: float, star_index: int, local_index: int) -> Node3D:
 	var planet_root: Node3D = Node3D.new()
 	planet_root.name = "Planet_%d_%d" % [star_index, local_index]
 	star_node.add_child(planet_root)
+
 	# render
 	var mesh: MeshInstance3D = MeshInstance3D.new()
 	var sphere: SphereMesh = SphereMesh.new()
@@ -216,20 +222,30 @@ func _spawn_planet(star_node: Node3D, orbit_radius: float, star_index: int, loca
 	m.albedo_color = Color.from_hsv(randf(), 0.55, 0.95)
 	mesh.material_override = m
 	planet_root.add_child(mesh)
+
+	# Rotación suave del planeta
+	var spin_script: Script = load("res://scenes/Spin.gd") as Script
+	if spin_script != null:
+		var spin: Node = spin_script.new()
+		spin.set("speed", 0.06) # lento
+		planet_root.add_child(spin)
+
 	# nombre flotante
 	var lbl: Label3D = Label3D.new()
 	lbl.text = "P%d-%d" % [star_index + 1, local_index + 1]
 	lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	lbl.position = Vector3(0, sphere.radius + 0.6, 0)
 	planet_root.add_child(lbl)
+
 	# órbita
 	var orbit_script: Script = load("res://scenes/Orbit.gd") as Script
 	if orbit_script != null:
 		var orbit_node: Node = orbit_script.new()
 		planet_root.add_child(orbit_node)
 		orbit_node.set("orbit_radius", orbit_radius)
-		orbit_node.set("orbit_speed", 0.3 + randf() * 0.4)
-	# Área clickable
+		orbit_node.set("orbit_speed", 0.20 + randf() * 0.25)
+
+	# click
 	var area: Area3D = Area3D.new()
 	area.input_ray_pickable = true
 	var colshape: CollisionShape3D = CollisionShape3D.new()
@@ -239,9 +255,10 @@ func _spawn_planet(star_node: Node3D, orbit_radius: float, star_index: int, loca
 	area.add_child(colshape)
 	planet_root.add_child(area)
 	area.input_event.connect(_on_planet_input.bind(planet_root))
-	# visibilidad por progreso
+
+	# visibilidad: completed (<= highest_unlocked) + el siguiente (planet_to_unlock_index)
 	var global_idx: int = planets.size()
-	var unlocked: bool = (global_idx <= planet_to_unlock_index)
+	var unlocked: bool = (global_idx <= highest_unlocked) or (global_idx == planet_to_unlock_index)
 	mesh.visible = unlocked
 	lbl.visible = unlocked
 	area.visible = unlocked
@@ -254,7 +271,7 @@ func _on_planet_input(_camera: Node, event: InputEvent, _click_position: Vector3
 		var ev: InputEventMouseButton = event as InputEventMouseButton
 		if ev.button_index == MOUSE_BUTTON_LEFT and ev.pressed:
 			var idx: int = int(planet.get_meta("global_index"))
-			if idx <= planet_to_unlock_index:
+			if idx <= highest_unlocked or idx == planet_to_unlock_index:
 				_select_planet(planet)
 
 func _select_planet(planet: Node) -> void:
