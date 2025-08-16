@@ -1,9 +1,5 @@
 extends Node3D
 
-@export var initial_fire_interval: float = 3.50
-@export var min_fire_interval: float = 0.80
-
-
 const WORLD_X_LIMIT: float = 8.5
 const PLANET_POS: Vector3 = Vector3(0, -27.33, -78.67)
 const PLANET_RADIUS: float = 150.0
@@ -75,7 +71,7 @@ func _ready() -> void:
 	_update_hud()
 
 	if not GameState.has_save():
-		GameState.player_stats["fire_rate"] = 1.0
+		GameState.player_stats["fire_rate"] = 2.0
 
 	set_process_input(true)
 
@@ -252,14 +248,11 @@ func _physics_process(delta: float) -> void:
 			_spawn_boss()
 		wave_timer = wave_cooldown
 
-	var fr: float = 1.0
-	if "player_stats" in GameState and "fire_rate" in GameState.player_stats:
-		fr = max(1.0, float(GameState.player_stats["fire_rate"]))
+	var rate: float = max(0.5, float(GameState.player_stats["fire_rate"]))
 	_shoot_timer -= delta
-	var interval: float = max(min_fire_interval, initial_fire_interval / fr)
 	if _shoot_timer <= 0.0:
 		_shoot()
-		_shoot_timer = interval
+		_shoot_timer = 1.0 / rate
 
 	if not touch_active and not mouse_dragging:
 		var axis := Input.get_action_strength("ui_right") - Input.get_action_strength("ui_left")
@@ -321,8 +314,8 @@ func _touch_move(pos: Vector2) -> void:
 	player.position.x = clamp(t * WORLD_X_LIMIT, -WORLD_X_LIMIT, WORLD_X_LIMIT)
 
 func _spawn_wave() -> void:
-	var count: int = clamp(2 + int(GameState.current_planet * 0.2), 2, 8)
-	for i in range(count):
+	var enemy_count: int = clamp(2 + int(GameState.current_planet * 0.2), 2, 8)
+	for i in range(enemy_count):
 		if randf() < 0.75:
 			var lane_x: float = ENEMY_LANES[randi() % ENEMY_LANES.size()]
 			var e := _spawn_enemy(lane_x, ENEMY_BASE_Z - i * 2.0)
@@ -330,15 +323,15 @@ func _spawn_wave() -> void:
 
 func _spawn_enemy(x: float, z: float) -> MeshInstance3D:	# Robust enemy instantiation (runtime load + fallback)
 	var e: MeshInstance3D = null
-	var paths := [
+	var paths: Array[String] = [
 		"res://models/enemies/EnemyWasp.tscn",
 		"res://models/enemies/EnemyManta.tscn",
 		"res://models/enemies/EnemyLeech.tscn",
 	]
 	var tries := paths.size()
 	while tries > 0 and e == null:
-		var path := paths[randi() % paths.size()]
-		var packed := load(path)
+		var path: String = paths[randi() % paths.size()]
+		var packed: PackedScene = load(path) as PackedScene
 		if packed:
 			var inst = packed.instantiate()
 			if inst is MeshInstance3D:
