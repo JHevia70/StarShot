@@ -1,15 +1,14 @@
 extends Node3D
-const ENEMY_SCENES: Array[String] = [
-	"res://models/enemies/EnemyWasp.tscn",
-	"res://models/enemies/EnemyManta.tscn",
-	"res://models/enemies/EnemyLeech.tscn",
-]
 
-const WORLD_X_LIMIT: float = 6.5
+@export var initial_fire_interval: float = 3.50
+@export var min_fire_interval: float = 0.80
+
+
+const WORLD_X_LIMIT: float = 8.5
 const PLANET_POS: Vector3 = Vector3(0, -27.33, -78.67)
 const PLANET_RADIUS: float = 150.0
 const PLANET_SPIN_X_DPS: float = 0.0
-const ENEMY_LANES: Array = [-6.0, -3.0, 0.0, 3.0, 6.0]
+const ENEMY_LANES: Array = [-8.0, -4.0, 0.0, 4.0, 8.0]
 const ENEMY_BASE_Z: float = -35.67
 
 const CAM_DEADZONE_X: float = 0.6
@@ -76,7 +75,7 @@ func _ready() -> void:
 	_update_hud()
 
 	if not GameState.has_save():
-		GameState.player_stats["fire_rate"] = 2.0
+		GameState.player_stats["fire_rate"] = 1.0
 
 	set_process_input(true)
 
@@ -160,7 +159,6 @@ func _update_hud() -> void:
 	hud_score_label.text = "Score: %d / %d" % [score, target]
 	hud_hp_bar.value = float(GameState.player_stats["health"])
 
-var paths: Array[String] = ENEMY_SCENES
 func _spawn_planet() -> void:
 	planet_pivot = Node3D.new()
 	planet_pivot.name = "PlanetPivot"
@@ -254,11 +252,14 @@ func _physics_process(delta: float) -> void:
 			_spawn_boss()
 		wave_timer = wave_cooldown
 
-	var rate: float = max(0.5, float(GameState.player_stats["fire_rate"]))
+	var fr: float = 1.0
+	if "player_stats" in GameState and "fire_rate" in GameState.player_stats:
+		fr = max(1.0, float(GameState.player_stats["fire_rate"]))
 	_shoot_timer -= delta
+	var interval: float = max(min_fire_interval, initial_fire_interval / fr)
 	if _shoot_timer <= 0.0:
 		_shoot()
-		_shoot_timer = 1.0 / rate
+		_shoot_timer = interval
 
 	if not touch_active and not mouse_dragging:
 		var axis := Input.get_action_strength("ui_right") - Input.get_action_strength("ui_left")
@@ -272,7 +273,11 @@ func _physics_process(delta: float) -> void:
 	elif player.position.x > right_bound:
 		cam_x = lerp(cam_x, player.position.x - CAM_DEADZONE_X, CAM_SMOOTH * delta)
 
-	cam_x = clamp(cam_x, -WORLD_X_LIMIT + CAM_EDGE_PAD, WORLD_X_LIMIT - CAM_EDGE_PAD)
+	# Evita recentrar en bordes: limita el scroll lateral
+	var _cam_left := -WORLD_X_LIMIT + CAM_EDGE_PAD
+	var _cam_right := WORLD_X_LIMIT - CAM_EDGE_PAD
+	cam_x = clamp(cam_x, _cam_left, _cam_right)
+
 	var cam_pos := Vector3(cam_x, 7.67, 8.0)
 	var tgt := Vector3(cam_x, 0, -1.33)
 	cam.look_at_from_position(cam_pos, tgt, Vector3.UP)
@@ -284,7 +289,6 @@ func _physics_process(delta: float) -> void:
 
 	if score >= target and enemies.size() == 0 and not boss_alive:
 		GameState.complete_planet(GameState.current_planet, score)
-		GameState.register_result(true, score, target)
 		get_tree().change_scene_to_file("res://scenes/GalaxyMap.tscn")
 
 func _input(event: InputEvent) -> void:
@@ -333,8 +337,8 @@ func _spawn_enemy(x: float, z: float) -> MeshInstance3D:	# Robust enemy instanti
 	]
 	var tries := paths.size()
 	while tries > 0 and e == null:
-		var path: String = paths[randi() % paths.size()]
-		var packed: Resource = load(path)
+		var path := paths[randi() % paths.size()]
+		var packed := load(path)
 		if packed:
 			var inst = packed.instantiate()
 			if inst is MeshInstance3D:
@@ -468,7 +472,6 @@ func _maybe_drop_loot(pos: Vector3) -> void:
 		world.add_child(l)
 
 func _on_player_dead() -> void:
-	GameState.register_result(false, score, target)
 	get_tree().change_scene_to_file("res://scenes/PlayMenu.tscn")
 
 func _hit_flash(pos: Vector3, big := false) -> void:

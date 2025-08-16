@@ -1,68 +1,8 @@
-[gd_scene format=3]
+[gd_scene load_steps=2 format=3 uid="uid://qd1r8o21ce31"]
 
-[ext_resource type="Texture2D" path="res://textures/ship_diffuse.png" id=1]
-
-[sub_resource type="StandardMaterial3D" id=2]
-resource_local_to_scene = true
-albedo_texture = ExtResource("1")
-albedo_color = Color(1, 1, 1, 1)
-roughness = 0.6
-metallic = 0.05
-
-[sub_resource type="StandardMaterial3D" id=3]
-resource_local_to_scene = true
-albedo_texture = ExtResource("1")
-albedo_color = Color(1, 1, 1, 1)
-roughness = 0.7
-
-[sub_resource type="StandardMaterial3D" id=4]
-resource_local_to_scene = true
-shading_mode = 0
-billboard_mode = 1
-transparency = 1
-blend_mode = 1
-albedo_color = Color(0.8, 0.95, 1, 0.85)
-emission_enabled = true
-emission = Color(0.5, 0.9, 1, 1)
-emission_energy_multiplier = 1.5
-
-[sub_resource type="BoxMesh" id=10]
-size = Vector3(0.4, 0.15, 0.6)
-
-[sub_resource type="BoxMesh" id=11]
-size = Vector3(0.35, 0.04, 0.25)
-
-[sub_resource type="CylinderMesh" id=12]
-top_radius = 0.0
-bottom_radius = 0.11
-height = 0.3
-radial_segments = 16
-
-[sub_resource type="QuadMesh" id=13]
-size = Vector2(0.225, 0.225)
+[ext_resource type="PackedScene" uid="uid://dswq5unrlu1hm" path="res://models/Nave de combate/Nave_de_combate.glb" id="1_mih3j"]
 
 [node name="PlayerShip" type="Node3D"]
 
-[node name="Body" type="MeshInstance3D" parent="."]
-mesh = SubResource("10")
-material_override = SubResource("2")
-
-[node name="LeftWing" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.375, 0, -0.05)
-mesh = SubResource("11")
-material_override = SubResource("3")
-
-[node name="RightWing" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.375, 0, -0.05)
-mesh = SubResource("11")
-material_override = SubResource("3")
-
-[node name="Nose" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, -0.45)
-mesh = SubResource("12")
-material_override = SubResource("2")
-
-[node name="EngineGlow" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.35)
-mesh = SubResource("13")
-material_override = SubResource("4")
+[node name="Nave_de_combate" parent="." instance=ExtResource("1_mih3j")]
+transform = Transform3D(-0.00179154, 0, -0.534622, 0, 0.534626, 0, 0.534622, 0, -0.00179154, -0.00256777, 0, -0.000968933)
