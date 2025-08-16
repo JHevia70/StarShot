@@ -6,12 +6,13 @@ var angle: float = 0.0
 
 func _process(delta: float) -> void:
 	angle += orbit_speed * delta
-	var parent: Node3D = get_parent() as Node3D
-	if parent == null:
+	var planet: Node3D = get_parent() as Node3D
+	if planet == null:
 		return
-	var center: Node3D = parent.get_parent() as Node3D
-	if center == null:
+	var star: Node3D = planet.get_parent() as Node3D
+	if star == null:
 		return
 	var x: float = cos(angle) * orbit_radius
 	var z: float = sin(angle) * orbit_radius
-	parent.translation = Vector3(x, 0.0, z)
+	# Godot 4: Node3D usa 'position' (Vector3). 'translation' ya no existe.
+	planet.position = Vector3(x, 0.0, z)

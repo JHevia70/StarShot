@@ -68,8 +68,7 @@ func _build_galaxy() -> void:
 
 	var ring_radius: float = 28.0
 	var star_count: int = distribution.size()
-	var i: int = 0
-	while i < star_count:
+	for i in range(star_count):
 		var ang: float = TAU * float(i) / float(max(1, star_count))
 		var pos: Vector3 = Vector3(cos(ang) * ring_radius, 0.0, sin(ang) * ring_radius)
 		var stype: String = STAR_TYPES[randi() % STAR_TYPES.size()]
@@ -78,13 +77,10 @@ func _build_galaxy() -> void:
 		stars.append(star_node)
 
 		var pcount: int = int(distribution[i])
-		var p: int = 0
-		while p < pcount:
+		for p in range(pcount):
 			var orbit_dist: float = 3.0 + 2.6 * float(p) + randf() * 0.6
 			var planet: Node3D = _spawn_planet(star_node, orbit_dist, i, p)
 			planets.append(planet)
-			p += 1
-		i += 1
 
 	if label_info != null:
 		label_info.text = "RMB: rotar | Rueda: zoom | Click planeta visible: transmisión"
@@ -128,7 +124,7 @@ func _spawn_planet(star_node: Node3D, orbit_radius: float, star_index: int, loca
 	star_node.add_child(planet_root)
 
 	var mesh: MeshInstance3D = MeshInstance3D.new()
-	mesh.input_pickable = true
+	# (Godot 4) MeshInstance3D NO tiene 'input_pickable'; el click se maneja con Area3D
 	var sphere: SphereMesh = SphereMesh.new()
 	sphere.radius = 0.45 + 0.2 * randf()
 	sphere.height = sphere.radius * 2.0
@@ -156,7 +152,8 @@ func _spawn_planet(star_node: Node3D, orbit_radius: float, star_index: int, loca
 
 	# Área clickable
 	var area: Area3D = Area3D.new()
-	area.input_ray_pickable = true
+	area.input_ray_pickable = true  # <- esto sí existe en Area3D
+	# forma de colisión es hija del Area3D
 	var colshape: CollisionShape3D = CollisionShape3D.new()
 	var sph: SphereShape3D = SphereShape3D.new()
 	sph.radius = sphere.radius * 1.25
@@ -174,7 +171,7 @@ func _spawn_planet(star_node: Node3D, orbit_radius: float, star_index: int, loca
 	planet_root.set_meta("display_name", "Planeta %d-%d" % [star_index + 1, local_index + 1])
 	return planet_root
 
-func _on_planet_input(camera: Node, event: InputEvent, click_position: Vector3, click_normal: Vector3, shape_idx: int, planet: Node) -> void:
+func _on_planet_input(_camera: Node, event: InputEvent, _click_position: Vector3, _click_normal: Vector3, _shape_idx: int, planet: Node) -> void:
 	if event is InputEventMouseButton:
 		var ev: InputEventMouseButton = event as InputEventMouseButton
 		if ev.button_index == MOUSE_BUTTON_LEFT and ev.pressed:
