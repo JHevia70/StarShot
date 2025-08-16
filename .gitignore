@@ -1,0 +1,10 @@
+.godot/
+.import/
+.export/
+mono/
+.DS_Store
+Thumbs.db
+bin/
+*.tmp
+*.bak
+*.old

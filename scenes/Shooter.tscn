@@ -1,0 +1,38 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/Shooter.gd" id="1"]
+
+[node name="Shooter" type="Node3D"]
+script = ExtResource("1")
+
+[node name="World" type="Node3D" parent="."]
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Margin" type="MarginContainer" parent="CanvasLayer"]
+layout_mode = 1
+anchors_preset = 1
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 370.0
+offset_bottom = 160.0
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/Margin"]
+layout_mode = 2
+custom_minimum_size = Vector2(300, 0)
+theme_override_constants/separation = 6
+
+[node name="HudScore" type="Label" parent="CanvasLayer/Margin/VBox"]
+layout_mode = 2
+text = "Puntos: 0"
+
+[node name="HudTarget" type="Label" parent="CanvasLayer/Margin/VBox"]
+layout_mode = 2
+text = "Objetivo: 0"
+
+[node name="HudProgress" type="ProgressBar" parent="CanvasLayer/Margin/VBox"]
+layout_mode = 2
+min_value = 0.0
+max_value = 100.0
+value = 0.0
+size_flags_horizontal = 3
