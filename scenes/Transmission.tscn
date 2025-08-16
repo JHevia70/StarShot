@@ -25,10 +25,15 @@ expand = true
 layer = 10
 
 [node name="VBox" type="VBoxContainer" parent="Overlay"]
-offset_left = 20.0
-offset_top = 20.0
-offset_right = 1004.0
-offset_bottom = 580.0
+anchors_preset = -1
+anchor_left = 0.028
+anchor_top = 0.016
+anchor_right = 0.028
+anchor_bottom = 0.016
+offset_left = -0.16
+offset_top = -0.480001
+offset_right = 679.84
+offset_bottom = 776.52
 
 [node name="Title" type="Label" parent="Overlay/VBox"]
 layout_mode = 2
@@ -40,6 +45,6 @@ custom_minimum_size = Vector2(0, 460)
 layout_mode = 2
 
 [node name="Action" type="Button" parent="Overlay/VBox"]
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 48.31)
 layout_mode = 2
 text = "Ir a la batalla"

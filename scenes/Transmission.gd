@@ -57,6 +57,7 @@ func _resolve_video_path(pref: String) -> String:
 		return ""
 	dir.list_dir_begin()
 	var best: String = ""
+	@warning_ignore("shadowed_variable_base_class")
 	var name: String = dir.get_next()
 	while name != "":
 		if not dir.current_is_dir():

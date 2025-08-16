@@ -326,6 +326,7 @@ func _spawn_wave() -> void:
 
 func _spawn_enemy(x: float, z: float) -> MeshInstance3D:	# Robust enemy instantiation (runtime load + fallback)
 	var e: MeshInstance3D = null
+	@warning_ignore("shadowed_variable")
 	var paths := [
 		"res://models/enemies/EnemyWasp.tscn",
 		"res://models/enemies/EnemyManta.tscn",

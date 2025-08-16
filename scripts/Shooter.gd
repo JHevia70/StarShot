@@ -1,23 +1,24 @@
 extends Node3D
 
-# --- Cadencia de disparo (muy lenta al inicio, mejora con upgrades) ---
-const BASE_FIRE_INTERVAL: float = 2.00   # s entre disparos al inicio (más lenta)
-const MIN_FIRE_INTERVAL: float = 0.35    # límite inferior (más lento que antes)
+# --- Cadencia de disparo (MUY lenta al inicio, mejora con upgrades) ---
+const BASE_FIRE_INTERVAL: float = 2.40   # s entre disparos al inicio
+const MIN_FIRE_INTERVAL: float = 0.50    # límite inferior claro
 var _shoot_cooldown: float = 0.0
 
 # --- Referencias (ajusta a tu escena si difiere) ---
 @onready var muzzle: Node3D = $Player/Muzzle if has_node("Player/Muzzle") else self
 var bullet_scene: PackedScene = null
 
+# Evitar 'shadowed variable'
 var mesh_paths: Array[String] = [
 	"res://models/ship_default.glb",
 	"res://models/ship_alt.glb"
 ]
 
 func _ready() -> void:
-	# Carga perezosa para evitar errores si la bala no está aún en su ruta
+	# Carga perezosa de la bala
 	var candidates: Array[String] = ["res://scenes/Bullet.tscn", "res://scenes/Projectiles/Bullet.tscn"]
-	for i in candidates.size():
+	for i in range(candidates.size()):
 		var p: String = candidates[i]
 		if ResourceLoader.exists(p):
 			bullet_scene = load(p) as PackedScene
@@ -45,8 +46,8 @@ func _fire() -> void:
 	get_tree().current_scene.add_child(b)
 	var xform: Transform3D = (muzzle if muzzle != null else self).global_transform
 	b.global_transform = xform
-	# ejemplo de uso de rutas sin sombreamiento local
+	# rutas de ejemplo; evita 'paths' locales
 	var mesh_paths_local: Array[String] = mesh_paths
 	var pick: int = randi() % max(1, mesh_paths_local.size())
 	var path: String = mesh_paths_local[pick]
-	# var res: Resource = load(path)  # si quisieras usar la ruta
+	# var res: Resource = load(path)

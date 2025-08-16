@@ -6,6 +6,7 @@ const MAX_PLANETS_PER_STAR: int = 10
 const STAR_TYPES: Array = ["O","B","A","F","G","K","M"]
 
 @export var sky_path: String = "res://textures/nebula_panorama.hdr"
+@export var enforce_only_one_at_start: bool = true
 
 @onready var cam: Camera3D = $Camera3D if has_node("Camera3D") else Camera3D.new()
 @onready var env_node: WorldEnvironment = $WorldEnvironment if has_node("WorldEnvironment") else WorldEnvironment.new()
@@ -30,7 +31,7 @@ var zoom_step: float = 5.0
 var target: Vector3 = Vector3.ZERO
 
 func _ready() -> void:
-	# Garantizar cámara, env y luz
+	# Garantías básicas
 	if not has_node("Camera3D"):
 		cam.name = "Camera3D"
 		add_child(cam)
@@ -61,7 +62,7 @@ func _ready() -> void:
 	env_res.sky = sky
 	env_node.environment = env_res
 
-	# Progreso: SOLO 1 planeta visible al inicio
+	# Progreso
 	highest_unlocked = -1
 	if typeof(GameState) != TYPE_NIL and "highest_unlocked" in GameState:
 		highest_unlocked = int(GameState.highest_unlocked)
@@ -242,11 +243,15 @@ func _spawn_planet(star_node: Node3D, orbit_radius: float, star_index: int, loca
 	area.add_child(colshape)
 	p.add_child(area)
 	area.input_event.connect(_on_planet_input.bind(p))
-	# visibilidad: SOLO ganados (<= highest_unlocked) + EXACTO siguiente (== next_visible)
+	# visibilidad
 	var gidx: int = planets.size()
-	var is_unlocked: bool = (gidx <= highest_unlocked)
-	var is_next: bool = (gidx == next_visible)
-	var unlocked: bool = is_unlocked or is_next
+	var unlocked: bool = false
+	if enforce_only_one_at_start and highest_unlocked <= 0:
+		# Estrictamente SOLO el primer planeta visible
+		unlocked = (gidx == 0)
+	else:
+		# Progreso normal: ganados + el siguiente
+		unlocked = (gidx <= highest_unlocked) or (gidx == highest_unlocked + 1)
 	mi.visible = unlocked
 	lbl.visible = unlocked
 	area.visible = unlocked
@@ -259,7 +264,12 @@ func _on_planet_input(_camera: Node, event: InputEvent, _click_position: Vector3
 		var mb: InputEventMouseButton = event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
 			var idx: int = int(planet.get_meta("global_index"))
-			if idx <= highest_unlocked or idx == next_visible:
+			var allowed: bool = false
+			if enforce_only_one_at_start and highest_unlocked <= 0:
+				allowed = (idx == 0)
+			else:
+				allowed = (idx <= highest_unlocked) or (idx == highest_unlocked + 1)
+			if allowed:
 				_select_planet(planet)
 
 func _select_planet(planet: Node) -> void:
