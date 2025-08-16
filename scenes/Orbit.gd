@@ -1,7 +1,7 @@
 extends Node
 
 @export var orbit_radius: float = 5.0
-@export var orbit_speed: float = 0.5
+@export var orbit_speed: float = 0.22
 var angle: float = 0.0
 
 func _process(delta: float) -> void:
@@ -14,5 +14,4 @@ func _process(delta: float) -> void:
 		return
 	var x: float = cos(angle) * orbit_radius
 	var z: float = sin(angle) * orbit_radius
-	# Godot 4: Node3D usa 'position' (Vector3). 'translation' ya no existe.
 	planet.position = Vector3(x, 0.0, z)
